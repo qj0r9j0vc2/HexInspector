@@ -1,11 +1,66 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"github.com/manifoldco/promptui"
 	"log"
 	"os"
 	"strings"
 )
+
+func main() {
+	menu()
+}
+
+func menu() {
+	fmt.Printf("\033[2J")
+	fmt.Printf("\033[1;1H")
+	for {
+		menu := []string{"File Open", "Show Sector Information", "Show Partition Information", "Exit"}
+		prompt := promptui.Select{Label: "Select Menu", Items: menu}
+		i, _, err := prompt.Run()
+		if err != nil {
+			log.Fatal(err)
+		}
+		switch i {
+		case 0:
+			fileOpen()
+			break
+		case 1:
+			showSectorInformation()
+			break
+		case 2:
+			showPartitionInformation()
+			break
+		case 3:
+			println("Exit..!!")
+			return
+		}
+	}
+}
+
+func fileOpen() {
+
+}
+
+func showSectorInformation() {
+	reader := bufio.NewReader(os.Stdin)
+
+	fmt.Print("Enter file path : ")
+	strName, err := reader.ReadString('\n')
+	if err != nil {
+		log.Fatal(err)
+	}
+	fileName := strings.TrimSpace(strName)
+
+	content, err := os.ReadFile(fileName)
+	if err != nil {
+		log.Fatalln("Cannot open file: " + fileName)
+	}
+
+	printBlock(content)
+}
 
 func printBlock(arr []byte) {
 	rowWidth := 16
@@ -49,16 +104,6 @@ func printBlock(arr []byte) {
 	}
 }
 
-func main() {
-	fileName := os.Args[1]
-	if fileName == "" {
-		log.Fatalln("fileName not input")
-	}
+func showPartitionInformation() {
 
-	content, err := os.ReadFile(fileName)
-	if err != nil {
-		log.Fatalln("Cannot open file: " + fileName)
-	}
-
-	printBlock(content)
 }
