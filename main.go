@@ -40,11 +40,7 @@ func menu() {
 	}
 }
 
-func fileOpen() {
-
-}
-
-func showSectorInformation() {
+func readFilePath() string {
 	reader := bufio.NewReader(os.Stdin)
 
 	fmt.Print("Enter file path : ")
@@ -53,7 +49,21 @@ func showSectorInformation() {
 		log.Fatal(err)
 	}
 	fileName := strings.TrimSpace(strName)
+	return fileName
+}
 
+func fileOpen() {
+	fileName := readFilePath()
+	_, err := os.ReadFile(fileName)
+	if err != nil {
+		fmt.Println("Cannot open file: " + fileName)
+	} else {
+		fmt.Println("File open success!!: " + fileName)
+	}
+}
+
+func showSectorInformation() {
+	fileName := readFilePath()
 	content, err := os.ReadFile(fileName)
 	if err != nil {
 		log.Fatalln("Cannot open file: " + fileName)
