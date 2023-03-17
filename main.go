@@ -3,11 +3,18 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"github.com/fatih/color"
 	"github.com/manifoldco/promptui"
 	"log"
 	"os"
+	"os/exec"
+	"strconv"
 	"strings"
 )
+
+var content []byte
+var sectorSize = 512
+var fgHiGreen = color.New(color.FgHiGreen).Add(color.Underline)
 
 func main() {
 	menu()
@@ -40,6 +47,27 @@ func menu() {
 	}
 }
 
+func inputStr() string {
+	reader := bufio.NewReader(os.Stdin)
+
+	str, err := reader.ReadString('\n')
+	if err != nil {
+		fmt.Printf("입력된 데이터가 올바르지 않습니다.: %s \n", err.Error())
+	}
+	str = strings.TrimSpace(str)
+
+	return str
+}
+
+func inputInt() int {
+	str := inputStr()
+	integer, err := strconv.Atoi(str)
+	if err != nil {
+		fmt.Printf("입력된 데이터가 올바르지 않습니다.: %s \n", err.Error())
+	}
+	return integer
+}
+
 func readFilePath() string {
 	reader := bufio.NewReader(os.Stdin)
 
@@ -62,22 +90,46 @@ func fileOpen() {
 	}
 }
 
+func findSector() {
+	printBlock(content, 0, sectorSize)
+	for {
+		fgHiGreen.Println("Enter sector idx: ")
+		idx := inputInt()
+
+		c := exec.Command("clear")
+		c.Stdout = os.Stdout
+		c.Run()
+
+		printBlock(content, idx*sectorSize, idx*sectorSize+sectorSize)
+
+	}
+	
+}
+
 func showSectorInformation() {
 	fileName := readFilePath()
-	content, err := os.ReadFile(fileName)
+	var err error
+	content, err = os.ReadFile(fileName)
 	if err != nil {
 		log.Fatalln("Cannot open file: " + fileName)
 	}
 
-	printBlock(content)
+	findSector()
 }
 
-func printBlock(arr []byte) {
+func printBlock(arr []byte, start int, end int) {
 	rowWidth := 16
 	currRowWidth := 16
-	seenBytes := 0
+	seenBytes := start
 
-	for i := 0; i < len(arr); i += rowWidth {
+	fgHiGreen.Printf("Total byte size: %d\n", len(arr))
+	fgHiGreen.Printf("Total sector size: %d\n", len(arr)/sectorSize)
+	fmt.Printf("Current Byte Idx: %d\n", start)
+	fmt.Printf(" offset(h)			  ")
+	fmt.Printf(" 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F\n")
+	fmt.Printf(" ===================================================================================================\n")
+
+	for i := start; i < end; i += rowWidth {
 		if (len(arr) - seenBytes) < rowWidth {
 			currRowWidth = len(arr) - seenBytes
 		}
