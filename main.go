@@ -127,35 +127,43 @@ func findSector() {
 	lastEndIdx := sectorSize
 	maxSectorSize := contentSize / sectorSize
 
+	clear()
 	printBlock(content, 0, int64(sectorSize), []foundHexArray{})
 
 	for {
 		fgHiGreenUnder.Println("Enter sector idx")
-		fmt.Printf("(if you want to search hex value, enter hex value after 'c')\n")
+		fmt.Printf("(if you want to search hex value, enter hex value after 'f')\n")
 		str := inputStr()
 		idx, err := strconv.ParseInt(str, 10, 64)
 		if err != nil {
-			if str == "c" || str == "C" {
+			if str == "f" || str == "F" {
 				var str string
 				str = inputStr()
 				str = strings.ReplaceAll(str, " ", "")
 
 				foundHexArray := findHexArray(content, lastStartIdx, lastEndIdx, stringToHex(str))
 
+				clear()
 				printBlock(content, lastStartIdx, lastEndIdx, foundHexArray)
 			}
 		} else {
 			if idx > maxSectorSize {
+				clear()
+
 				fgHiRed.Printf("It's over than sector Size(%d) entered: %d\n", maxSectorSize, idx)
 				fgHiRed.Printf("Reseted maximum size: %d\n", maxSectorSize)
 				printBlock(content, maxSectorSize*sectorSize, contentSize, []foundHexArray{})
 			} else if idx == maxSectorSize {
 				lastStartIdx = idx * sectorSize
 				lastEndIdx = idx * sectorSize
+
+				clear()
 				printBlock(content, lastStartIdx, lastEndIdx, []foundHexArray{})
 			} else {
 				lastStartIdx = idx * sectorSize
 				lastEndIdx = (idx + 1) * sectorSize
+
+				clear()
 				printBlock(content, lastStartIdx, lastEndIdx, []foundHexArray{})
 			}
 		}
@@ -205,7 +213,6 @@ func showSectorInformation() {
 }
 
 func printBlock(arr []byte, start int64, end int64, highlightHexArraySets []foundHexArray) {
-	clear()
 
 	hlHexArrIdx := 0
 	hlHexArrSize := len(highlightHexArraySets)
@@ -235,7 +242,9 @@ func printBlock(arr []byte, start int64, end int64, highlightHexArraySets []foun
 					i < highlightHexArraySets[hlHexArrIdx].endIdx-seenBytes) {
 					fgHiCyanUnder.Printf("%02x", row[i])
 					fmt.Printf(" ")
-					hlHexArrIdx++
+					if (i + 1) == highlightHexArraySets[hlHexArrIdx].endIdx-seenBytes {
+						hlHexArrIdx++
+					}
 				} else {
 					fmt.Printf("%02x ", row[i])
 				}
