@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"github.com/fatih/color"
 	"github.com/manifoldco/promptui"
@@ -13,8 +14,17 @@ import (
 )
 
 var content []byte
-var sectorSize = 512
-var fgHiGreen = color.New(color.FgHiGreen).Add(color.Underline)
+var sectorSize = int64(512)
+var fgHiGreenUnder = color.New(color.FgHiGreen).Add(color.Underline)
+var fgHiCyanUnder = color.New(color.FgHiCyan).Add(color.Underline)
+var fgHiCyan = color.New(color.FgHiCyan)
+var fgHiRed = color.New(color.FgRed)
+var contentSize int64
+
+type foundHexArray struct {
+	startIdx int64
+	endIdx   int64
+}
 
 func main() {
 	menu()
@@ -59,13 +69,10 @@ func inputStr() string {
 	return str
 }
 
-func inputInt() int {
-	str := inputStr()
-	integer, err := strconv.Atoi(str)
-	if err != nil {
-		fmt.Printf("입력된 데이터가 올바르지 않습니다.: %s \n", err.Error())
-	}
-	return integer
+func clear() {
+	c := exec.Command("clear")
+	c.Stdout = os.Stdout
+	c.Run()
 }
 
 func readFilePath() string {
@@ -90,20 +97,100 @@ func fileOpen() {
 	}
 }
 
-func findSector() {
-	printBlock(content, 0, sectorSize)
-	for {
-		fgHiGreen.Println("Enter sector idx: ")
-		idx := inputInt()
+func stringToHex(str string) []int {
 
-		c := exec.Command("clear")
-		c.Stdout = os.Stdout
-		c.Run()
-
-		printBlock(content, idx*sectorSize, idx*sectorSize+sectorSize)
-
+	var intArr []int
+	var sumArr []int
+	for i := 0; i < len(str); i++ {
+		byte := int(str[i]) - 48
+		if byte >= 17 {
+			if byte >= 49 {
+				intArr = append(intArr, byte-39)
+			} else {
+				intArr = append(intArr, byte-7)
+			}
+		} else if byte < 10 {
+			intArr = append(intArr, byte)
+		} else {
+			intArr = append(intArr, 0)
+		}
+		if i%2 == 1 {
+			sumArr = append(sumArr, intArr[i-1]*16+intArr[i])
+		}
 	}
-	
+
+	return sumArr
+}
+
+func findSector() {
+	lastStartIdx := int64(0)
+	lastEndIdx := sectorSize
+	maxSectorSize := contentSize / sectorSize
+
+	printBlock(content, 0, int64(sectorSize), []foundHexArray{})
+
+	for {
+		fgHiGreenUnder.Println("Enter sector idx")
+		fmt.Printf("(if you want to search hex value, enter hex value after 'c')\n")
+		str := inputStr()
+		idx, err := strconv.ParseInt(str, 10, 64)
+		if err != nil {
+			if str == "c" || str == "C" {
+				var str string
+				str = inputStr()
+				str = strings.ReplaceAll(str, " ", "")
+
+				foundHexArray := findHexArray(content, lastStartIdx, lastEndIdx, stringToHex(str))
+
+				printBlock(content, lastStartIdx, lastEndIdx, foundHexArray)
+			}
+		} else {
+			if idx > maxSectorSize {
+				fgHiRed.Printf("It's over than sector Size(%d) entered: %d\n", maxSectorSize, idx)
+				fgHiRed.Printf("Reseted maximum size: %d\n", maxSectorSize)
+				printBlock(content, maxSectorSize*sectorSize, contentSize, []foundHexArray{})
+			} else if idx == maxSectorSize {
+				lastStartIdx = idx * sectorSize
+				lastEndIdx = idx * sectorSize
+				printBlock(content, lastStartIdx, lastEndIdx, []foundHexArray{})
+			} else {
+				lastStartIdx = idx * sectorSize
+				lastEndIdx = (idx + 1) * sectorSize
+				printBlock(content, lastStartIdx, lastEndIdx, []foundHexArray{})
+			}
+		}
+	}
+
+}
+
+func findHexArray(arr []byte, start int64, end int64, matchStr []int) []foundHexArray {
+	hexLen := int64(len(matchStr))
+
+	var hexArr []byte
+	for i := int64(0); i < hexLen; i++ {
+		hexArr = append(hexArr, byte(matchStr[i]))
+	}
+
+	var resultSets []foundHexArray
+	for i := start; i < end; i++ {
+		if bytes.Compare(arr[i:i+hexLen], hexArr) == 0 {
+			fmt.Printf("matched start: %d, end: %d\n", i, i+hexLen)
+			resultSets = append(resultSets, foundHexArray{
+				startIdx: i,
+				endIdx:   i + hexLen,
+			})
+		}
+	}
+	if len(resultSets) == 0 {
+		return []foundHexArray{
+			{
+				startIdx: -1,
+				endIdx:   -1,
+			},
+		}
+	}
+	return resultSets
+
 }
 
 func showSectorInformation() {
@@ -113,33 +200,45 @@ func showSectorInformation() {
 	if err != nil {
 		log.Fatalln("Cannot open file: " + fileName)
 	}
-
+	contentSize = int64(len(content))
 	findSector()
 }
 
-func printBlock(arr []byte, start int, end int) {
-	rowWidth := 16
-	currRowWidth := 16
-	seenBytes := start
+func printBlock(arr []byte, start int64, end int64, highlightHexArraySets []foundHexArray) {
+	clear()
 
-	fgHiGreen.Printf("Total byte size: %d\n", len(arr))
-	fgHiGreen.Printf("Total sector size: %d\n", len(arr)/sectorSize)
+	hlHexArrIdx := 0
+	hlHexArrSize := len(highlightHexArraySets)
+
+	var rowWidth int64 = 16
+	var currRowWidth int64 = 16
+	var seenBytes int64 = start
+
+	fgHiGreenUnder.Printf("Total byte size: %d\n", contentSize)
+	fgHiGreenUnder.Printf("Total sector size: %d\n", contentSize/sectorSize)
 	fmt.Printf("Current Byte Idx: %d\n", start)
-	fmt.Printf(" offset(h)			  ")
+	fgHiCyan.Printf(" offset(Dec|	   Hex)  ")
 	fmt.Printf(" 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F\n")
 	fmt.Printf(" ===================================================================================================\n")
 
 	for i := start; i < end; i += rowWidth {
-		if (len(arr) - seenBytes) < rowWidth {
-			currRowWidth = len(arr) - seenBytes
+		if (int64(len(arr)) - seenBytes) < rowWidth {
+			currRowWidth = int64(len(arr)) - seenBytes
 		}
 		row := arr[i:(seenBytes + currRowWidth)]
 
-		fmt.Printf("Dec/Hex: %10d| %10X  | ", seenBytes, seenBytes)
+		fmt.Printf("%10d| %10X  | ", seenBytes, seenBytes)
 
-		for i := 0; i < rowWidth; i++ {
+		for i := int64(0); i < rowWidth; i++ {
 			if i < currRowWidth {
-				fmt.Printf("%02x ", row[i])
+				if hlHexArrSize > hlHexArrIdx && (i >= highlightHexArraySets[hlHexArrIdx].startIdx-seenBytes &&
+					i < highlightHexArraySets[hlHexArrIdx].endIdx-seenBytes) {
+					fgHiCyanUnder.Printf("%02x", row[i])
+					fmt.Printf(" ")
+					hlHexArrIdx++
+				} else {
+					fmt.Printf("%02x ", row[i])
+				}
 			} else {
 				fmt.Print(strings.Repeat(" ", 3))
 			}
@@ -148,7 +247,7 @@ func printBlock(arr []byte, start int, end int) {
 		fmt.Print("|")
 		fmt.Print(" ")
 
-		for i := 0; i < rowWidth; i++ {
+		for i := int64(0); i < rowWidth; i++ {
 			if i < currRowWidth {
 				if row[i] >= 0x20 && row[i] < 0x7f {
 					fmt.Print(string(row[i]))
@@ -164,6 +263,9 @@ func printBlock(arr []byte, start int, end int) {
 
 		seenBytes += rowWidth
 	}
+	fmt.Printf("Current sector idx: ")
+	fgHiCyanUnder.Printf("%d", start/int64(sectorSize))
+	fmt.Printf("/%d\n\n\n", contentSize/sectorSize)
 }
 
 func showPartitionInformation() {
