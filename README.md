@@ -23,8 +23,10 @@
 <img width="864" alt="스크린샷 2023-03-21 오전 1 43 32" src="https://user-images.githubusercontent.com/59428479/226409485-30eb971f-f614-450a-ad07-c0dea08e910c.png">
 
 
- ## Show Partition Information
-  파티션 정보 조회 (아직 미구현)
+ ## Show FileSystem Header
+ ![image](https://user-images.githubusercontent.com/59428479/227617163-76778fb6-eb5e-4242-93d1-94cae30d89dd.png)
+
+
 
 
 
