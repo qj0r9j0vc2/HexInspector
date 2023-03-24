@@ -1,4 +1,4 @@
-package SectorInformation
+package showHex
 
 import (
 	"HexInspector/util"
@@ -20,7 +20,7 @@ var (
 	contentSize int64
 )
 
-func ShowSectorInformation() {
+func ShowHex() {
 	fileName := util.ReadFilePath()
 	var err error
 	content, err = os.ReadFile(fileName)
@@ -69,7 +69,7 @@ func findSector() {
 				lastEndIdx = idx * sectorSize
 
 				util.Clear()
-				printBlock(content, lastStartIdx, lastEndIdx, []FoundHexArray{})
+				printBlock(content, maxsectorSize*sectorSize, contentSize, []FoundHexArray{})
 			} else {
 				lastStartIdx = idx * sectorSize
 				lastEndIdx = (idx + 1) * sectorSize

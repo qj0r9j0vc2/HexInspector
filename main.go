@@ -1,8 +1,9 @@
 package main
 
 import (
-	"HexInspector/SectorInformation"
 	"HexInspector/fileOpen"
+	"HexInspector/headerParse"
+	"HexInspector/showHex"
 	"HexInspector/util"
 	"github.com/manifoldco/promptui"
 	"log"
@@ -14,9 +15,9 @@ func main() {
 
 func menu() {
 	util.Clear()
+	menu := []string{"File Open", "Show Sector Information", "Show File Header", "Exit"}
+	prompt := promptui.Select{Label: "Select Menu", Items: menu}
 	for {
-		menu := []string{"File Open", "Show Sector Information", "Show Partition Information", "Exit"}
-		prompt := promptui.Select{Label: "Select Menu", Items: menu}
 		i, _, err := prompt.Run()
 		if err != nil {
 			log.Fatal(err)
@@ -26,18 +27,14 @@ func menu() {
 			fileOpen.FileOpen()
 			break
 		case 1:
-			SectorInformation.ShowSectorInformation()
+			showHex.ShowHex()
 			break
 		case 2:
-			showPartitionInformation()
+			headerParse.PrintFileSystem()
 			break
 		case 3:
 			println("Exit..!!")
 			return
 		}
 	}
-}
-
-func showPartitionInformation() {
-
 }

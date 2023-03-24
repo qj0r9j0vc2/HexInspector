@@ -8,11 +8,11 @@ import (
 
 func FileOpen() {
 	fileName := util.ReadFilePath()
-	_, err := os.ReadFile(fileName)
+	_, err := os.Open(fileName)
 	if err != nil {
-		fmt.Println("Cannot open file: " + fileName)
-		fmt.Println(err.Error())
-	} else {
-		fmt.Println("File open success!!: " + fileName)
+		fmt.Println("Cannot Open file: " + err.Error())
+		return
 	}
+	util.Clear()
+
 }
